@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Character State
 // @namespace    https://github.com/tsukao2240/chatgpt-character-images
-// @version      1.0.0
+// @version      1.0.1
 // @description  Show a character image for the state tag in each ChatGPT response.
 // @author       tsukao2240
 // @match        https://chatgpt.com/*
@@ -35,6 +35,7 @@
     '.assistant-message',
   ].join(',');
   const IMAGE_CLASS = 'chatgpt-character-state-image';
+  const TAG_CLASS = 'chatgpt-character-state-tag';
   let scheduled = false;
 
   const findResponses = () => {
@@ -56,12 +57,30 @@
 
     while (walker.nextNode()) {
       const node = walker.currentNode;
-      if (node.parentElement?.closest(`.${IMAGE_CLASS}`)) continue;
+      if (node.parentElement?.closest(`.${IMAGE_CLASS}, .${TAG_CLASS}`)) continue;
       if (STATE_PATTERN.test(node.nodeValue || '')) textNodes.push(node);
     }
 
     textNodes.forEach((node) => {
-      node.nodeValue = (node.nodeValue || '').replace(STATE_PATTERN_GLOBAL, '');
+      const value = node.nodeValue || '';
+      const fragment = document.createDocumentFragment();
+      let lastIndex = 0;
+
+      value.replace(STATE_PATTERN_GLOBAL, (tag, offset) => {
+        if (offset > lastIndex) fragment.append(value.slice(lastIndex, offset));
+
+        const hiddenTag = document.createElement('span');
+        hiddenTag.className = TAG_CLASS;
+        hiddenTag.hidden = true;
+        hiddenTag.setAttribute('aria-hidden', 'true');
+        hiddenTag.textContent = tag;
+        fragment.append(hiddenTag);
+        lastIndex = offset + tag.length;
+        return tag;
+      });
+
+      if (lastIndex < value.length) fragment.append(value.slice(lastIndex));
+      node.replaceWith(fragment);
     });
   };
 

@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         ChatGPT Character State
 // @namespace    https://github.com/tsukao2240/chatgpt-character-images
-// @version      1.0.1
-// @description  Show a character image for the state tag in each ChatGPT response.
+// @version      1.1.0
+// @description  Show character state images and compact ChatGPT character icons.
 // @author       tsukao2240
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -36,7 +36,47 @@
   ].join(',');
   const IMAGE_CLASS = 'chatgpt-character-state-image';
   const TAG_CLASS = 'chatgpt-character-state-tag';
+  const STYLE_ID = 'chatgpt-character-custom-style';
+  const AVATAR_URL = 'https://cdn-ak.f.st-hatena.com/images/fotolife/t/tsukaox/20260831/20260831075943.png';
   let scheduled = false;
+
+  const installCustomStyle = () => {
+    if (document.getElementById(STYLE_ID)) return;
+
+    const style = document.createElement('style');
+    style.id = STYLE_ID;
+    style.textContent = `
+      div.agent-turn,
+      article[data-turn="assistant"],
+      [data-message-author-role="assistant"] {
+        position: relative;
+      }
+
+      div.agent-turn::before,
+      article[data-turn="assistant"]::before,
+      [data-message-author-role="assistant"]::before {
+        background-image: url('${AVATAR_URL}');
+        content: "";
+        position: absolute;
+        left: -50px;
+        top: 5px;
+        width: 40px;
+        height: 40px;
+        background-size: contain;
+        background-position: center;
+        background-repeat: no-repeat;
+        border-radius: 20%;
+      }
+
+      .markdown.prose img[src^="https://cdn-ak.f.st-hatena.com/images/fotolife/"],
+      [data-message-author-role="assistant"] img[src^="https://cdn-ak.f.st-hatena.com/images/fotolife/"] {
+        width: 200px !important;
+        height: 200px !important;
+        object-fit: contain;
+      }
+    `;
+    (document.head || document.documentElement).appendChild(style);
+  };
 
   const findResponses = () => {
     const responses = new Set(document.querySelectorAll(ASSISTANT_SELECTORS));
@@ -129,6 +169,7 @@
   };
 
   const start = () => {
+    installCustomStyle();
     scheduleProcessing();
     new MutationObserver(scheduleProcessing).observe(document.body, {
       childList: true,
